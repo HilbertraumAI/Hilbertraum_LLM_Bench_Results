@@ -1,0 +1,12 @@
+{
+  "name": "hilbertraum-benchmark-results",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "validate": "node scripts/results.mjs validate",
+    "build": "node scripts/results.mjs build",
+    "test": "node --test tests/*.test.mjs"
+  }
+}

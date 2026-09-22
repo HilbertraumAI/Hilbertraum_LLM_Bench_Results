@@ -1,0 +1,3 @@
+* text=auto eol=lf
+# Finalized evidence is checksummed. Preserve every byte on every platform.
+/bundles/** -text

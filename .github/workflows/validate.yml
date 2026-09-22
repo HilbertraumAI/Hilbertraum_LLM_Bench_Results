@@ -1,0 +1,61 @@
+name: Validate results
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate bundles and collection
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Read benchmark tool pin
+        id: tool
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from 'node:fs';
+          import { readToolPin } from './scripts/results.mjs';
+          const pin = await readToolPin();
+          appendFileSync(process.env.GITHUB_OUTPUT, `repository=${pin.repository}\nref=${pin.ref}\n`);
+          NODE
+
+      - name: Check out public benchmark tool
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ steps.tool.outputs.repository }}
+          ref: ${{ steps.tool.outputs.ref }}
+          path: .tools/benchmark
+          persist-credentials: false
+
+      - name: Test repository tooling
+        run: node --test tests/*.test.mjs
+
+      - name: Validate bundles and build collection
+        env:
+          RESULTS_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node scripts/results.mjs build
+
+      - name: Save review or accepted build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.ref == 'refs/heads/main' && 'accepted-results' || 'results-preview' }}
+          path: build/
+          if-no-files-found: error
+          retention-days: 14
